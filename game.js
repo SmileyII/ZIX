@@ -1,12 +1,13 @@
-import { initializeApp } from "https://gstatic.com";
-import { getDatabase, ref, set, get, update, onValue } from "https://gstatic.com";
+const cdnBase = "https://www." + "gstatic.com" + "/firebasejs/10.8.0/";
+const { initializeApp } = await import(cdnBase + "firebase-app.js");
+const { getDatabase, ref, set, get, update, onValue } = await import(cdnBase + "firebase-database.js");
 
 const firebaseConfig = {
     apiKey: "AIzaSyCpJpYoKXw1OqWn1MLnAXSSv8TsPgLwxw8",
-    authDomain: "://firebaseapp.com",
-    databaseURL: "https://firebasedatabase.app",
+    authDomain: "neverdellzix" + ".firebaseapp.com",
+    databaseURL: "https://neverdellzix-default-rtdb.europe-west1." + "firebasedatabase.app",
     projectId: "neverdellzix",
-    storageBucket: "neverdellzix.firebasestorage.app",
+    storageBucket: "neverdellzix" + ".firebasestorage.app",
     messagingSenderId: "952625363716",
     appId: "1:952625363716:web:23b7884d0c47730a06ee51",
     measurementId: "G-727YHG2MNP"
