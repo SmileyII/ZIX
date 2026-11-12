@@ -177,7 +177,7 @@
     };
 
     const EVENTS = {
-empty_waste: { text: "🏜️ Пустошь: ветер гонит песок. Спокойный шаг.", fials: 0, soul: 0, skip: false },
+        empty_waste: { text: "🏜️ Пустошь: ветер гонит песок. Спокойный шаг.", fials: 0, soul: 0, skip: false },
         statue: { text: "🗿 Статуя в песках: найден тайник! (+5 фиалов)", fials: 5, soul: 0, skip: false },
         kara_riosa: { text: "🏛️ Кара Риоса: молитва у руин укрепляет Душу. (+5 Души)", fials: 0, soul: 5, skip: false },
         scorpenid: { text: "🦂 Ловушка Скорпенида! (-5 Души и пропуск хода)", fials: 0, soul: -5, skip: true },
@@ -407,7 +407,7 @@ empty_waste: { text: "🏜️ Пустошь: ветер гонит песок. 
         if (ev.skip) {
             if (me.hero === "diessa") {
                 me.pos = Math.floor(Math.random() * s.size) + 1;
-logMsg += " 🎵 Диесса разрушает оковы и телепортируется на клетку " + me.pos + "!";
+                logMsg += " 🎵 Диесса разрушает оковы и телепортируется на клетку " + me.pos + "!";
             } else if (me.hero === "lira") {
                 me.soul = Math.min(100, me.soul + 10);
                 me.skip = true;
