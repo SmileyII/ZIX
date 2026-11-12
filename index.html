@@ -19,18 +19,14 @@
         .container { max-width: 720px; width: 100%; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
         h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; color: #d8b4fe; letter-spacing: 1px; }
         .subtitle { text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; }
-        
         .screen { display: none; }
         .screen.active { display: block; }
-
-        /* Лобби и выбор героя */
         .hero-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
         .hero-card { background: #23202e; border: 2px solid var(--border); border-radius: 8px; padding: 12px; cursor: pointer; transition: 0.2s; }
         .hero-card:hover { border-color: var(--accent); }
         .hero-card.selected { border-color: #d8b4fe; background: #2d263d; }
         .hero-card h3 { font-size: 1rem; margin-bottom: 6px; }
         .hero-card p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.3; }
-
         .lobby-controls { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border); padding-top: 20px; }
         .join-box { display: flex; gap: 8px; }
         input { flex: 1; background: #121017; border: 1px solid var(--border); color: white; padding: 12px; border-radius: 8px; font-size: 1rem; text-transform: uppercase; }
@@ -39,44 +35,31 @@
         button:disabled { background: #3b364a; color: #7a738c; cursor: not-allowed; }
         .btn-secondary { background: #2e2a3b; }
         .btn-secondary:hover:not(:disabled) { background: #3f3a52; }
-
-        /* Игровой экран */
         .top-bar { display: flex; justify-content: space-between; align-items: center; background: #14121a; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
         .room-badge { background: #2d263d; color: #d8b4fe; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-family: monospace; font-size: 1.1rem; }
         .turn-indicator { font-weight: bold; color: #4ade80; }
         .turn-indicator.wait { color: #facc15; }
-
-        /* Сетка карты */
         .board-wrap { margin-bottom: 16px; }
         .board-header { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; }
         .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; background: #121017; padding: 12px; border-radius: 8px; border: 1px solid var(--border); }
         .cell { aspect-ratio: 1; background: #23202e; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 1.1rem; position: relative; border: 1px solid #2e2a3b; transition: 0.3s; }
         .cell-num { position: absolute; top: 2px; left: 4px; font-size: 0.6rem; color: #6e6780; }
-        
-        /* Цвета клеток */
-        .cell.empty_waste, .cell.empty_cave { background: #383542; border-color: #716d82; }
-        .cell.statue, .cell.crystal_mine { background: #423818; border-color: #eab308; }
+        .cell.empty_waste { background: #383542; border-color: #716d82; }
+        .cell.statue { background: #423818; border-color: #eab308; }
         .cell.scorpenid { background: #3b1c4a; border-color: #a855f7; }
         .cell.kara_riosa, .cell.taraxacum_event { background: #163b26; border-color: #22c55e; }
-
-        /* Панель игроков */
         .players-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
         .player-box { background: #14121a; border: 1px solid var(--border); padding: 12px; border-radius: 8px; }
         .player-box.me { border-color: #9b4dca; }
         .player-title { font-weight: bold; margin-bottom: 6px; font-size: 0.95rem; }
         .stats { font-size: 0.9rem; color: #cbd5e1; display: flex; gap: 12px; }
-
-        /* Действия и инвентарь */
         .actions { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
         .actions button { flex: 1; min-width: 180px; }
         .inventory-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
         .item-btn { background: #262233; border: 1px solid #4c4466; font-size: 0.85rem; padding: 8px 12px; }
-
-        /* Лог событий */
         .log-box { background: #121017; border: 1px solid var(--border); border-radius: 8px; padding: 12px; height: 150px; overflow-y: auto; font-size: 0.85rem; line-height: 1.4; }
         .log-entry { margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #1f1c29; }
         .log-entry:last-child { border-bottom: none; margin-bottom: 0; }
-
         @media (max-width: 500px) {
             .board { grid-template-columns: repeat(6, 1fr); }
             .players-panel { grid-template-columns: 1fr; }
@@ -89,7 +72,6 @@
     <h1>🔮 ЗИКС: ИСПЫТАНИЕ НЕВЕРДЕЛЛА</h1>
     <p class="subtitle">Сужающееся измерение • Общая карта • Столкновение душ</p>
 
-    <!-- ЭКРАН 1: ВЫБОР ГЕРОЯ И ЛОББИ -->
     <div id="lobby-screen" class="screen active">
         <h3 style="margin-bottom: 12px; font-size: 1rem;">1. Выберите своего персонажа:</h3>
         <div class="hero-grid" id="hero-list"></div>
@@ -103,7 +85,6 @@
         </div>
     </div>
 
-    <!-- ЭКРАН 2: ИГРОВОЕ ПОЛЕ -->
     <div id="game-screen" class="screen">
         <div class="top-bar">
             <div>Комната: <span class="room-badge" id="display-room-id">---</span></div>
@@ -141,320 +122,6 @@
     </div>
 </div>
 
-<!-- Подключение Firebase SDK -->
-<script type="module">
-    import { initializeApp } from "https://gstatic.com";
-    import { getDatabase, ref, set, get, update, onValue } from "https://gstatic.com";
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyCpJpYoKXw1OqWn1MLnAXSSv8TsPgLwxw8",
-        authDomain: "neverdellzix.firebaseapp.com",
-        databaseURL: "https://neverdellzix-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "neverdellzix",
-        storageBucket: "neverdellzix.firebasestorage.app",
-        messagingSenderId: "952625363716",
-        appId: "1:952625363716:web:23b7884d0c47730a06ee51",
-        measurementId: "G-727YHG2MNP"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    // Справочники игры
-    const HEROES = {
-        lira: { name: "🩸 Лира", soul: 20, fials: 5, inv: ["boots", "potion", "blood_harp"], desc: "Магия крови. Ловушки лечат (+10 Души). Старт: 20 HP." },
-        melissa: { name: "🛡️ Мелисса", soul: 55, fials: 10, inv: ["boots", "potion"], desc: "Непробиваемая стена. Повышенный запас Души (55 HP)." },
-        crayd: { name: "⚔️ Крэйд", soul: 40, fials: 20, inv: ["boots", "potion"], desc: "Шаги по 5-6 клеток. Бонус при сужении карты." },
-        rios: { name: "🔪 Риос", soul: 45, fials: 10, inv: ["boots", "potion"], desc: "Шаги по 1-3 клетки. Шанс восстановить +1 Души при ходе." },
-        diessa: { name: "🎵 Диесса", soul: 35, fials: 35, inv: ["boots", "potion", "ballad"], desc: "Телепортируется при попадании в капкан." }
-    };
-
-    const ITEMS = {
-        boots: { name: "🥾 Сапоги (+4 шага)" },
-        potion: { name: "🧪 Экстракт (+15 Души)" },
-        blood_harp: { name: "🩸 Арфа крови (Капканы)" },
-        ballad: { name: "🎵 Баллада (Лечение)" }
-    };
-
-    const EVENTS = {
-        empty_waste: { text: "🏜️ Пустошь: ветер гонит песок. Спокойный шаг.", fials: 0, soul: 0, skip: false },
-        statue: { text: "🗿 Статуя в песках: найден тайник! (+5 фиалов)", fials: 5, soul: 0, skip: false },
-        kara_riosa: { text: "🏛️ Кара Риоса: молитва у руин укрепляет Душу. (+5 Души)", fials: 0, soul: 5, skip: false },
-        scorpenid: { text: "🦂 Ловушка Скорпенида! (-5 Души и пропуск хода)", fials: 0, soul: -5, skip: true },
-        taraxacum_event: { text: "🌱 Заросли Тараксакума! Яростный выпад чудовища. (-15 Души)", fials: 0, soul: -15, skip: false }
-    };
-
-    let selectedHero = "melissa";
-    let currentRoomId = null;
-    let myRole = null;
-    let gameState = null;
-
-    const heroListEl = document.getElementById("hero-list");
-    Object.entries(HEROES).forEach(([id, h]) => {
-        const div = document.createElement("div");
-        div.className = "hero-card" + (id === selectedHero ? " selected" : "");
-        div.innerHTML = "<h3>" + h.name + "</h3><p>" + h.desc + "</p>";
-        div.onclick = () => {
-            document.querySelectorAll(".hero-card").forEach(el => el.classList.remove("selected"));
-            div.classList.add("selected");
-            selectedHero = id;
-        };
-        heroListEl.appendChild(div);
-    });
-
-    document.getElementById("btn-create").onclick = async () => {
-        const roomCode = "ZIX-" + Math.floor(1000 + Math.random() * 9000);
-        const h = HEROES[selectedHero];
-        
-        const initialData = {
-            size: 60,
-            turn: "p1",
-            status: "waiting",
-            boardMemory: {},
-            logs: ["🌀 Игрок 1 (" + h.name + ") открыл разлом в измерении Зикс. Ожидаем соперника..."],
-            p1: { hero: selectedHero, name: h.name, pos: 1, soul: h.soul, fials: h.fials, inv: [...h.inv], skip: false },
-            p2: null
-        };
-
-        await set(ref(db, "rooms/" + roomCode), initialData);
-        enterRoom(roomCode, "p1");
-    };
-
-    document.getElementById("btn-join").onclick = async () => {
-        const roomCode = document.getElementById("room-input").value.trim().toUpperCase();
-        if (!roomCode) return alert("Введите код комнаты!");
-
-        const roomRef = ref(db, "rooms/" + roomCode);
-        const snapshot = await get(roomRef);
-
-        if (!snapshot.exists()) return alert("Комната не найдена! Проверьте код.");
-        const data = snapshot.val();
-        if (data.p2) return alert("В этой комнате уже два игрока!");
-
-        const h = HEROES[selectedHero];
-        const updatedLogs = [...(data.logs || []), "😈 Игрок 2 (" + h.name + ") вошел в измерение! Дуэль началась."];
-
-        await update(roomRef, {
-            status: "playing",
-            logs: updatedLogs,
-            p2: { hero: selectedHero, name: h.name, pos: 60, soul: h.soul, fials: h.fials, inv: [...h.inv], skip: false }
-        });
-
-        enterRoom(roomCode, "p2");
-    };
-
-    function enterRoom(roomCode, role) {
-        currentRoomId = roomCode;
-        myRole = role;
-        document.getElementById("lobby-screen").classList.remove("active");
-        document.getElementById("game-screen").classList.add("active");
-        document.getElementById("display-room-id").innerText = roomCode;
-
-        onValue(ref(db, "rooms/" + roomCode), (snapshot) => {
-            gameState = snapshot.val();
-            if (gameState) renderGame();
-        });
-    }
-
-    function renderGame() {
-        const s = gameState;
-        document.getElementById("board-size-text").innerText = s.size;
-
-        const turnEl = document.getElementById("turn-status");
-        const rollBtn = document.getElementById("btn-roll");
-
-        if (s.status === "waiting") {
-            turnEl.innerText = "⏳ Ждем второго игрока...";
-            turnEl.className = "turn-indicator wait";
-            rollBtn.disabled = true;
-        } else if (s.status === "finished") {
-            turnEl.innerText = "🏁 Испытание завершено!";
-            turnEl.className = "turn-indicator";
-            rollBtn.disabled = true;
-        } else if (s.turn === myRole) {
-            turnEl.innerText = "🟢 ВАШ ХОД!";
-            turnEl.className = "turn-indicator";
-            rollBtn.disabled = false;
-        } else {
-            turnEl.innerText = "⏳ Ход соперника...";
-            turnEl.className = "turn-indicator wait";
-            rollBtn.disabled = true;
-        }
-
-        document.getElementById("p1-box").className = "player-box" + (myRole === "p1" ? " me" : "");
-        document.getElementById("p1-name").innerText = "👤 " + s.p1.name + (myRole === "p1" ? " (Вы)" : "");
-        document.getElementById("p1-stats").innerText = "❤️ Душа: " + s.p1.soul + " | 🪙 Фиалы: " + s.p1.fials + " | 📍 Кл: " + s.p1.pos;
-
-        if (s.p2) {
-            document.getElementById("p2-box").className = "player-box" + (myRole === "p2" ? " me" : "");
-            document.getElementById("p2-name").innerText = "😈 " + s.p2.name + (myRole === "p2" ? " (Вы)" : "");
-            document.getElementById("p2-stats").innerText = "❤️ Душа: " + s.p2.soul + " | 🪙 Фиалы: " + s.p2.fials + " | 📍 Кл: " + s.p2.pos;
-        }
-
-        const boardEl = document.getElementById("game-board");
-        boardEl.innerHTML = "";
-        const mem = s.boardMemory || {};
-
-        for (let i = 1; i <= s.size; i++) {
-            const cell = document.createElement("div");
-            cell.className = "cell";
-            if (mem[i]) cell.classList.add(mem[i]);
-
-            let icons = "";
-            if (s.p1 && s.p1.pos === i) icons += "👤";
-            if (s.p2 && s.p2.pos === i) icons += "😈";
-            if (!icons && mem[i]) {
-                if (mem[i] === "empty_waste") icons = "⚪";
-                else if (mem[i] === "statue") icons = "🟡";
-                else if (mem[i] === "scorpenid") icons = "🟣";
-                else icons = "🟢";
-            }
-
-            cell.innerHTML = '<span class="cell-num">' + i + '</span><span>' + icons + '</span>';
-            boardEl.appendChild(cell);
-        }
-
-        const invEl = document.getElementById("inventory-list");
-        invEl.innerHTML = "";
-        const me = s[myRole];
-        if (me && me.inv) {
-            me.inv.forEach((itemKey, idx) => {
-                const btn = document.createElement("button");
-                btn.className = "item-btn";
-                btn.innerText = ITEMS[itemKey].name;
-                btn.disabled = (s.status !== "playing" || s.turn !== myRole);
-                btn.onclick = () => useItem(idx, itemKey);
-                invEl.appendChild(btn);
-            });
-        }
-
-        const logEl = document.getElementById("event-log");
-        logEl.innerHTML = (s.logs || []).slice().reverse().map(msg => '<div class="log-entry">' + msg + '</div>').join("");
-    }
-
-    document.getElementById("btn-roll").onclick = async () => {
-        if (!gameState || gameState.turn !== myRole || gameState.status !== "playing") return;
-
-        const s = JSON.parse(JSON.stringify(gameState));
-        const me = s[myRole];
-        const enemyRole = myRole === "p1" ? "p2" : "p1";
-        const enemy = s[enemyRole];
-        const dir = myRole === "p1" ? 1 : -1;
-
-        if (me.skip) {
-            me.skip = false;
-            s.logs.push("⏳ " + me.name + " пропускает ход, выбираясь из пут!");
-            s.turn = enemyRole;
-            await set(ref(db, "rooms/" + currentRoomId), s);
-            return;
-        }
-
-        let steps = 1;
-        if (me.hero === "crayd") {
-            steps = Math.random() < 0.5 ? 5 : 6;
-        } else if (me.hero === "rios") {
-            steps = Math.floor(Math.random() * 3) + 1;
-            if (Math.random() < 0.5) me.soul = Math.min(100, me.soul + 1);
-        } else {
-            const r = Math.floor(Math.random() * 10) + 1;
-            steps = r <= 4 ? 1 : (r <= 8 ? 2 : 4);
-        }
-
-        me.pos += steps * dir;
-        let logMsg = "🎲 " + me.name + " делает шаг на " + steps + " кл. (позиция " + me.pos + "). ";
-
-        if (me.pos > s.size) {
-            me.pos = 1;
-            s.size = Math.max(15, s.size - 2);
-            logMsg += "🔥 Край измерения сгорел! Поле сжалось до " + s.size + " клеток. ";
-            if (me.hero === "crayd") { me.soul += 5; me.fials += 5; }
-        } else if (me.pos < 1) {
-            me.pos = s.size;
-            s.size = Math.max(15, s.size - 2);
-            logMsg += "🔥 Край измерения сгорел! Поле сжалось до " + s.size + " клеток. ";
-            if (me.hero === "crayd") { me.soul += 5; me.fials += 5; }
-        }
-
-        if (enemy.pos > s.size) enemy.pos = s.size;
-
-        if (me.pos === enemy.pos) {
-            s.status = "finished";
-            let winnerText = "";
-            if (me.soul > enemy.soul) winnerText = "🏆 Побеждает " + me.name + " (Душа: " + me.soul + " против " + enemy.soul + ")!";
-            else if (enemy.soul > me.soul) winnerText = "🏆 Побеждает " + enemy.name + " (Душа: " + enemy.soul + " против " + me.soul + ")!";
-            else winnerText = me.fials >= enemy.fials ? "🏆 Ничья по Душе, но по фиалам побеждает " + me.name + "!" : "🏆 По фиалам побеждает " + enemy.name + "!";
-
-            s.logs.push("⚔️ СТОЛКНОВЕНИЕ ЛОБ В ЛОБ НА КЛЕТКЕ " + me.pos + "! " + winnerText);
-            await set(ref(db, "rooms/" + currentRoomId), s);
-            return;
-        }
-
-        if (!s.boardMemory) s.boardMemory = {};
-        let evKey = s.boardMemory[me.pos];
-        if (!evKey) {
-            const pool = ["empty_waste", "empty_waste", "empty_waste", "statue", "statue", "kara_riosa", "scorpenid", "taraxacum_event"];
-            evKey = pool[Math.floor(Math.random() * pool.length)];
-            s.boardMemory[me.pos] = evKey;
-        } else {
-            logMsg += "[Повторная метка] ";
-        }
-
-        const ev = EVENTS[evKey];
-        logMsg += ev.text;
-        me.fials += ev.fials;
-        me.soul = Math.min(100, Math.max(0, me.soul + ev.soul));
-
-        if (ev.skip) {
-            if (me.hero === "diessa") {
-                me.pos = Math.floor(Math.random() * s.size) + 1;
-                logMsg += " 🎵 Диесса разрушает оковы и телепортируется на клетку " + me.pos + "!";
-            } else if (me.hero === "lira") {
-                me.soul = Math.min(100, me.soul + 10);
-                me.skip = true;
-                logMsg += " 🩸 Магия крови исцеляет Лиру (+10 Души), но ход пропущен.";
-            } else {
-                me.skip = true;
-            }
-        }
-
-        s.logs.push(logMsg);
-        s.turn = enemyRole;
-        await set(ref(db, "rooms/" + currentRoomId), s);
-    };
-
-    async function useItem(idx, itemKey) {
-        if (!gameState || gameState.turn !== myRole || gameState.status !== "playing") return;
-        const s = JSON.parse(JSON.stringify(gameState));
-        const me = s[myRole];
-        const enemyRole = myRole === "p1" ? "p2" : "p1";
-        const enemy = s[enemyRole];
-        if (!s.boardMemory) s.boardMemory = {};
-
-        me.inv.splice(idx, 1);
-        let msg = "";
-
-        if (itemKey === "potion") {
-            me.soul = Math.min(100, me.soul + 15);
-            msg = "🧪 " + me.name + " выпивает Экстракт Воли (+15 Души).";
-        } else if (itemKey === "blood_harp") {
-            [enemy.pos - 1, enemy.pos + 1].forEach(c => {
-                if (c >= 1 && c <= s.size) s.boardMemory[c] = "scorpenid";
-            });
-            msg = "🩸 " + me.name + " играет на Арфе крови! Клетки вокруг соперника превращены в капканы.";
-        } else if (itemKey === "ballad") {
-            const dir = myRole === "p1" ? 1 : -1;
-            [me.pos + dir, me.pos + dir * 3].forEach(c => {
-                if (c >= 1 && c <= s.size) s.boardMemory[c] = "kara_riosa";
-            });
-            msg = "🎵 " + me.name + " поет Балладу Неверделла, создавая благословенные клетки впереди!";
-        } else if (itemKey === "boots") {
-            const dir = myRole === "p1" ? 1 : -1;
-            me.pos += 4 * dir;
-            if (me.pos > s.size) me.pos = 1;
-            if (me.pos < 1) me.pos = s.size;
-            msg = "🥾 " + me.name + " использует Сапоги Скитальца и переносится на клетку " + me.pos + "!";
-        }
-
-        s.logs.push(msg);
-        await set(ref(db, "rooms/" + currentRoomId), s);
-    }
+<script type="module" src="./game.js"></script>
+</body>
+</html>
