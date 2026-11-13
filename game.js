@@ -72,8 +72,19 @@ const ITEMS = {
     boots: { name: "🥾 Сапоги (+4 шага)", buy: 10, sell: 5 },
     potion: { name: "🍷 Экстракт (+15 Души)", buy: 12, sell: 6 },
     blood_harp: { name: "🩸 Арфа крови", buy: 18, sell: 9 },
-    ballad: { name: "🎵 Баллада", buy: 15, sell: 7 }
+    ballad: { name: "🎵 Баллада", buy: 15, sell: 7 },
+    aegis: { name: "🛡️ Щит Эгиды (Блок)", buy: 14, sell: 7 },
+    swap_orb: { name: "🔮 Сфера Сдвига", buy: 20, sell: 10 }
 };
+
+function generateShopStock() {
+    const allKeys = Object.keys(ITEMS);
+    const stock = [];
+    for (let i = 0; i < 5; i++) {
+        stock.push(allKeys[Math.floor(Math.random() * allKeys.length)]);
+    }
+    return stock;
+}
 
 const EVENTS = {
     empty_waste: { text: "🏜️ Пустошь: ветер гонит песок. Спокойный шаг.", fials: 0, soul: 0, skip: false },
@@ -159,6 +170,7 @@ document.getElementById("btn-create").onclick = async () => {
             turnStart: Date.now(),
             status: "waiting",
             activeRegion: selectedRegion,
+            shopStock: generateShopStock(),
             winner: null,
             boardMemory: {},
             logs: ["🌀 " + profile.name + " (" + h.name + ") открыл разлом. Предпочтение: " + REGIONS[selectedRegion].name + "."],
@@ -272,9 +284,10 @@ document.getElementById("btn-rematch").onclick = async () => {
         turnStart: Date.now(),
         status: "playing",
         activeRegion: chosenReg,
+        shopStock: generateShopStock(),
         winner: null,
         boardMemory: {},
-        logs: ["🔄 РЕВАНШ! Рулетка 50/50 выбрала: " + REGIONS[chosenReg].name + "!"],
+        logs: ["🔄 РЕВАНШ! Рулетка 50/50 выбрала: " + REGIONS[chosenReg].name + "! Прилавок торговца обновлен."],
         p1: { userName: gameState.p1.userName, hero: gameState.p1.hero, icon: h1.icon, name: h1.name, regionChoice: gameState.p1.regionChoice, pos: 1, soul: h1.soul, fials: h1.fials, inv: [...h1.inv], skip: false },
         p2: { userName: gameState.p2.userName, hero: gameState.p2.hero, icon: h2.icon, name: h2.name, regionChoice: gameState.p2.regionChoice, pos: 60, soul: h2.soul, fials: h2.fials, inv: [...h2.inv], skip: false }
     };
@@ -383,7 +396,6 @@ function renderGame() {
         me.inv.forEach((itemKey, idx) => {
             const chip = document.createElement("div");
             chip.className = "item-chip";
-
             const useBtn = document.createElement("button");
             useBtn.className = "item-use-btn";
             useBtn.innerText = ITEMS[itemKey].name;
@@ -405,14 +417,25 @@ function renderGame() {
 
     const shopEl = document.getElementById("shop-list");
     shopEl.innerHTML = "";
-    Object.entries(ITEMS).forEach(([key, item]) => {
-        const btn = document.createElement("button");
-        btn.className = "shop-buy-btn";
-        btn.innerText = item.name + " (" + item.buy + "🏺)";
-        btn.disabled = (!isMyTurn || !me || me.fials < item.buy);
-        btn.onclick = () => buyItem(key);
-        shopEl.appendChild(btn);
-    });
+    const stock = s.shopStock || [];
+    if (stock.length === 0) {
+        const emptyMsg = document.createElement("span");
+        emptyMsg.style.fontSize = "0.8rem";
+        emptyMsg.style.color = "#938ca3";
+        emptyMsg.innerText = "Прилавок пуст! Новый завоз будет при следующем сжатии поля.";
+        shopEl.appendChild(emptyMsg);
+    } else {
+        stock.forEach((key, stockIdx) => {
+            const item = ITEMS[key];
+            if (!item) return;
+            const btn = document.createElement("button");
+            btn.className = "shop-buy-btn";
+            btn.innerText = item.name + " (" + item.buy + "🏺)";
+            btn.disabled = (!isMyTurn || !me || me.fials < item.buy);
+            btn.onclick = () => buyItem(stockIdx, key);
+            shopEl.appendChild(btn);
+        });
+    }
 
     const logEl = document.getElementById("event-log");
     logEl.innerHTML = "";
@@ -424,17 +447,18 @@ function renderGame() {
     });
 }
 
-async function buyItem(itemKey) {
+async function buyItem(stockIdx, itemKey) {
     if (!gameState || gameState.turn !== myRole || gameState.status !== "playing") return;
     const s = JSON.parse(JSON.stringify(gameState));
     const me = s[myRole];
     const item = ITEMS[itemKey];
-    if (me.fials < item.buy) return;
+    if (!s.shopStock || s.shopStock[stockIdx] !== itemKey || me.fials < item.buy) return;
 
     me.fials -= item.buy;
+    s.shopStock.splice(stockIdx, 1);
     if (!me.inv) me.inv = [];
     me.inv.push(itemKey);
-    s.logs.push("⚖️ " + me.name + " покупает у торговца: " + item.name + " за " + item.buy + " фиалов.");
+    s.logs.push("⚖️ " + me.name + " выкупает с прилавка: " + item.name + " за " + item.buy + " фиалов!");
     await set(ref(db, "rooms/" + currentRoomId), s);
 }
 
@@ -446,7 +470,7 @@ async function sellItem(idx, itemKey) {
 
     me.inv.splice(idx, 1);
     me.fials += item.sell;
-    s.logs.push("⚖️ " + me.name + " продает торговцу " + item.name + " и получает +" + item.sell + " фиалов.");
+    s.logs.push("⚖️ " + me.name + " продает торговцу " + item.name + " (+" + item.sell + " фиалов).");
     await set(ref(db, "rooms/" + currentRoomId), s);
 }
 
@@ -485,12 +509,14 @@ document.getElementById("btn-roll").onclick = async () => {
     if (me.pos > s.size) {
         me.pos = 1;
         s.size = Math.max(15, s.size - 2);
-        logMsg += "🔥 Край измерения сгорел! Поле сжалось. ";
+        s.shopStock = generateShopStock();
+        logMsg += "🔥 Край сгорел! Поле сжалось, торговец обновил товары. ";
         if (me.hero === "crayd") { me.soul += 5; me.fials += 5; }
     } else if (me.pos < 1) {
         me.pos = s.size;
         s.size = Math.max(15, s.size - 2);
-        logMsg += "🔥 Край измерения сгорел! Поле сжалось. ";
+        s.shopStock = generateShopStock();
+        logMsg += "🔥 Край сгорел! Поле сжалось, торговец обновил товары. ";
         if (me.hero === "crayd") { me.soul += 5; me.fials += 5; }
     }
 
@@ -530,8 +556,21 @@ document.getElementById("btn-roll").onclick = async () => {
     me.fials += ev.fials;
     me.soul = Math.min(100, Math.max(0, me.soul + ev.soul));
 
+    if (me.soul <= 0) {
+        s.status = "finished";
+        s.winner = enemyRole;
+        logMsg += " 💀 Душа " + me.name + " угасла в песках! Победа достается " + enemy.name + "!";
+        s.logs.push(logMsg);
+        await set(ref(db, "rooms/" + currentRoomId), s);
+        return;
+    }
+
     if (ev.skip) {
-        if (me.hero === "diessa") {
+        const aegisIdx = (me.inv || []).indexOf("aegis");
+        if (aegisIdx !== -1) {
+            me.inv.splice(aegisIdx, 1);
+            logMsg += " 🛡️ Щит Эгиды рассыпался, но спас от капкана!";
+        } else if (me.hero === "diessa") {
             me.pos = Math.floor(Math.random() * s.size) + 1;
             logMsg += " 🎵 Диесса разрушает оковы и телепортируется!";
         } else if (me.hero === "lira") {
@@ -580,6 +619,14 @@ async function useItem(idx, itemKey) {
         if (me.pos > s.size) me.pos = 1;
         if (me.pos < 1) me.pos = s.size;
         msg = "🥾 " + me.name + " использует Сапоги Скитальца и совершает рывок вперед!";
+    } else if (itemKey === "aegis") {
+        me.inv.push("aegis");
+        msg = "🛡️ Щит Эгиды работает пассивно — он сам сработает при попадании в капкан!";
+    } else if (itemKey === "swap_orb") {
+        const tempPos = me.pos;
+        me.pos = enemy.pos;
+        enemy.pos = tempPos;
+        msg = "🔮 " + me.name + " активирует Сферу Сдвига и меняется местами с соперником!";
     }
 
     s.logs.push(msg);
