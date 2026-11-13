@@ -2,6 +2,23 @@ const cdnBase = "https://www." + "gstatic.com" + "/firebasejs/10.8.0/";
 const { initializeApp } = await import(cdnBase + "firebase-app.js");
 const { getDatabase, ref, set, get, update, onValue } = await import(cdnBase + "firebase-database.js");
 
+// Подключение Telegram Mini App SDK (если открыто внутри Telegram)
+const tgScript = document.createElement("script");
+tgScript.src = "https://telegram." + "org/js/telegram-web-app.js";
+tgScript.onload = () => {
+    if (window.Telegram && window.Telegram.WebApp) {
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            profile.name = tg.initDataUnsafe.user.first_name || profile.name;
+            saveProfile();
+            updateProfileUI();
+        }
+    }
+};
+document.head.appendChild(tgScript);
+
 const firebaseConfig = {
     apiKey: "AIzaSyCpJpYoKXw1OqWn1MLnAXSSv8TsPgLwxw8",
     authDomain: "neverdellzix" + ".firebaseapp.com",
@@ -15,6 +32,27 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+
+// Управление сохранением профиля
+let profile = JSON.parse(localStorage.getItem("zix_profile")) || {
+    name: "Скиталец",
+    wins: 0,
+    games: 0,
+    totalFials: 0,
+    lastHero: "melissa"
+};
+
+function saveProfile() {
+    localStorage.setItem("zix_profile", JSON.stringify(profile));
+}
+
+function updateProfileUI() {
+    document.getElementById("prof-name").innerText = profile.name;
+    document.getElementById("prof-wins").innerText = profile.wins;
+    document.getElementById("prof-games").innerText = profile.games;
+    document.getElementById("prof-fials").innerText = profile.totalFials;
+}
+updateProfileUI();
 
 const HEROES = {
     lira: { name: "🩸 Лира", soul: 20, fials: 5, inv: ["boots", "potion", "blood_harp"], desc: "Магия крови. Ловушки лечат (+10 Души). Старт: 20 HP." },
@@ -39,10 +77,11 @@ const EVENTS = {
     taraxacum_event: { text: "🌱 Заросли Тараксакума! Яростный выпад чудовища. (-15 Души)", fials: 0, soul: -15, skip: false }
 };
 
-let selectedHero = "melissa";
+let selectedHero = profile.lastHero || "melissa";
 let currentRoomId = null;
 let myRole = null;
 let gameState = null;
+let matchRecorded = false;
 
 const heroListEl = document.getElementById("hero-list");
 Object.entries(HEROES).forEach(([id, h]) => {
@@ -61,9 +100,21 @@ Object.entries(HEROES).forEach(([id, h]) => {
         document.querySelectorAll(".hero-card").forEach(el => el.classList.remove("selected"));
         div.classList.add("selected");
         selectedHero = id;
+        profile.lastHero = id;
+        saveProfile();
     };
     heroListEl.appendChild(div);
 });
+
+// Копирование кода комнаты
+document.getElementById("btn-copy-code").onclick = () => {
+    if (!currentRoomId) return;
+    navigator.clipboard.writeText(currentRoomId).then(() => {
+        const btn = document.getElementById("btn-copy-code");
+        btn.innerText = "✅ Скопировано!";
+        setTimeout(() => { btn.innerText = "📋 Копировать"; }, 2000);
+    });
+};
 
 document.getElementById("btn-create").onclick = async () => {
     const btn = document.getElementById("btn-create");
@@ -77,9 +128,10 @@ document.getElementById("btn-create").onclick = async () => {
             size: 60,
             turn: "p1",
             status: "waiting",
+            winner: null,
             boardMemory: {},
-            logs: ["🌀 Игрок 1 (" + h.name + ") открыл разлом в измерении Зикс. Ожидаем соперника..."],
-            p1: { hero: selectedHero, name: h.name, pos: 1, soul: h.soul, fials: h.fials, inv: [...h.inv], skip: false },
+            logs: ["🌀 " + profile.name + " (" + h.name + ") открыл разлом в измерении Зикс. Ожидаем соперника..."],
+            p1: { userName: profile.name, hero: selectedHero, name: h.name, pos: 1, soul: h.soul, fials: h.fials, inv: [...h.inv], skip: false },
             p2: null
         };
 
@@ -104,12 +156,12 @@ document.getElementById("btn-join").onclick = async () => {
     if (data.p2) return alert("В этой комнате уже два игрока!");
 
     const h = HEROES[selectedHero];
-    const updatedLogs = [...(data.logs || []), "😈 Игрок 2 (" + h.name + ") вошел в измерение! Дуэль началась."];
+    const updatedLogs = [...(data.logs || []), "😈 " + profile.name + " (" + h.name + ") вошел в измерение! Дуэль началась."];
 
     await update(roomRef, {
         status: "playing",
         logs: updatedLogs,
-        p2: { hero: selectedHero, name: h.name, pos: 60, soul: h.soul, fials: h.fials, inv: [...h.inv], skip: false }
+        p2: { userName: profile.name, hero: selectedHero, name: h.name, pos: 60, soul: h.soul, fials: h.fials, inv: [...h.inv], skip: false }
     });
 
     enterRoom(roomCode, "p2");
@@ -118,6 +170,7 @@ document.getElementById("btn-join").onclick = async () => {
 function enterRoom(roomCode, role) {
     currentRoomId = roomCode;
     myRole = role;
+    matchRecorded = false;
     document.getElementById("lobby-screen").classList.remove("active");
     document.getElementById("game-screen").classList.add("active");
     document.getElementById("display-room-id").innerText = roomCode;
@@ -128,12 +181,38 @@ function enterRoom(roomCode, role) {
     });
 }
 
+// Кнопка реванша
+document.getElementById("btn-rematch").onclick = async () => {
+    if (!gameState || !gameState.p1 || !gameState.p2) return;
+    const h1 = HEROES[gameState.p1.hero];
+    const h2 = HEROES[gameState.p2.hero];
+
+    const rematchData = {
+        size: 60,
+        turn: gameState.turn === "p1" ? "p2" : "p1",
+        status: "playing",
+        winner: null,
+        boardMemory: {},
+        logs: ["🔄 РЕВАНШ! Измерение Зикс восстановлено до 60 клеток. Новая дуэль началась!"],
+        p1: { userName: gameState.p1.userName, hero: gameState.p1.hero, name: h1.name, pos: 1, soul: h1.soul, fials: h1.fials, inv: [...h1.inv], skip: false },
+        p2: { userName: gameState.p2.userName, hero: gameState.p2.hero, name: h2.name, pos: 60, soul: h2.soul, fials: h2.fials, inv: [...h2.inv], skip: false }
+    };
+
+    await set(ref(db, "rooms/" + currentRoomId), rematchData);
+};
+
 function renderGame() {
     const s = gameState;
     document.getElementById("board-size-text").innerText = s.size;
 
     const turnEl = document.getElementById("turn-status");
     const rollBtn = document.getElementById("btn-roll");
+    const rematchBtn = document.getElementById("btn-rematch");
+
+    if (s.status === "playing") {
+        matchRecorded = false;
+        rematchBtn.style.display = "none";
+    }
 
     if (s.status === "waiting") {
         turnEl.innerText = "⏳ Ждем второго игрока...";
@@ -143,6 +222,17 @@ function renderGame() {
         turnEl.innerText = "🏁 Испытание завершено!";
         turnEl.className = "turn-indicator";
         rollBtn.disabled = true;
+        rematchBtn.style.display = "block";
+
+        // Записываем статистику в профиль один раз за матч
+        if (!matchRecorded && s[myRole]) {
+            matchRecorded = true;
+            profile.games += 1;
+            profile.totalFials += s[myRole].fials;
+            if (s.winner === myRole) profile.wins += 1;
+            saveProfile();
+            updateProfileUI();
+        }
     } else if (s.turn === myRole) {
         turnEl.innerText = "🟢 ВАШ ХОД!";
         turnEl.className = "turn-indicator";
@@ -154,12 +244,12 @@ function renderGame() {
     }
 
     document.getElementById("p1-box").className = "player-box" + (myRole === "p1" ? " me" : "");
-    document.getElementById("p1-name").innerText = "👤 " + s.p1.name + (myRole === "p1" ? " (Вы)" : "");
+    document.getElementById("p1-name").innerText = "👤 " + s.p1.name + " [" + (s.p1.userName || "Игрок 1") + "]" + (myRole === "p1" ? " (Вы)" : "");
     document.getElementById("p1-stats").innerText = "❤️ Душа: " + s.p1.soul + " | 🪙 Фиалы: " + s.p1.fials + " | 📍 Кл: " + s.p1.pos;
 
     if (s.p2) {
         document.getElementById("p2-box").className = "player-box" + (myRole === "p2" ? " me" : "");
-        document.getElementById("p2-name").innerText = "😈 " + s.p2.name + (myRole === "p2" ? " (Вы)" : "");
+        document.getElementById("p2-name").innerText = "😈 " + s.p2.name + " [" + (s.p2.userName || "Игрок 2") + "]" + (myRole === "p2" ? " (Вы)" : "");
         document.getElementById("p2-stats").innerText = "❤️ Душа: " + s.p2.soul + " | 🪙 Фиалы: " + s.p2.fials + " | 📍 Кл: " + s.p2.pos;
     }
 
@@ -252,7 +342,7 @@ document.getElementById("btn-roll").onclick = async () => {
     if (me.pos > s.size) {
         me.pos = 1;
         s.size = Math.max(15, s.size - 2);
-      logMsg += "🔥 Край измерения сгорел! Поле сжалось до " + s.size + " клеток. ";
+        logMsg += "🔥 Край измерения сгорел! Поле сжалось до " + s.size + " клеток. ";
         if (me.hero === "crayd") { me.soul += 5; me.fials += 5; }
     } else if (me.pos < 1) {
         me.pos = s.size;
@@ -266,9 +356,16 @@ document.getElementById("btn-roll").onclick = async () => {
     if (me.pos === enemy.pos) {
         s.status = "finished";
         let winnerText = "";
-        if (me.soul > enemy.soul) winnerText = "🏆 Побеждает " + me.name + " (Душа: " + me.soul + " против " + enemy.soul + ")!";
-        else if (enemy.soul > me.soul) winnerText = "🏆 Побеждает " + enemy.name + " (Душа: " + enemy.soul + " против " + me.soul + ")!";
-        else winnerText = me.fials >= enemy.fials ? "🏆 Ничья по Душе, но по фиалам побеждает " + me.name + "!" : "🏆 По фиалам побеждает " + enemy.name + "!";
+        if (me.soul > enemy.soul) {
+            s.winner = myRole;
+            winnerText = "🏆 Побеждает " + me.name + " (Душа: " + me.soul + " против " + enemy.soul + ")!";
+        } else if (enemy.soul > me.soul) {
+            s.winner = enemyRole;
+            winnerText = "🏆 Побеждает " + enemy.name + " (Душа: " + enemy.soul + " против " + me.soul + ")!";
+        } else {
+            s.winner = me.fials >= enemy.fials ? myRole : enemyRole;
+            winnerText = me.fials >= enemy.fials ? "🏆 Ничья по Душе, но по фиалам побеждает " + me.name + "!" : "🏆 По фиалам побеждает " + enemy.name + "!";
+        }
 
         s.logs.push("⚔️ СТОЛКНОВЕНИЕ ЛОБ В ЛОБ НА КЛЕТКЕ " + me.pos + "! " + winnerText);
         await set(ref(db, "rooms/" + currentRoomId), s);
