@@ -2,7 +2,6 @@ const cdnBase = "https://www." + "gstatic.com" + "/firebasejs/10.8.0/";
 const { initializeApp } = await import(cdnBase + "firebase-app.js");
 const { getDatabase, ref, set, get, update, onValue } = await import(cdnBase + "firebase-database.js");
 
-// Подключение Telegram Mini App SDK (если открыто внутри Telegram)
 const tgScript = document.createElement("script");
 tgScript.src = "https://telegram." + "org/js/telegram-web-app.js";
 tgScript.onload = () => {
@@ -33,13 +32,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// Управление сохранением профиля
 let profile = JSON.parse(localStorage.getItem("zix_profile")) || {
     name: "Скиталец",
     wins: 0,
     games: 0,
     totalFials: 0,
-    lastHero: "melissa"
+    lastHero: "melissa",
+    lastRegion: "shteld"
 };
 
 function saveProfile() {
@@ -55,58 +54,88 @@ function updateProfileUI() {
 updateProfileUI();
 
 const HEROES = {
-    lira: { name: "🩸 Лира", soul: 20, fials: 5, inv: ["boots", "potion", "blood_harp"], desc: "Магия крови. Ловушки лечат (+10 Души). Старт: 20 HP." },
-    melissa: { name: "🛡️ Мелисса", soul: 55, fials: 10, inv: ["boots", "potion"], desc: "Непробиваемая стена. Повышенный запас Души (55 HP)." },
-    crayd: { name: "⚔️ Крэйд", soul: 40, fials: 20, inv: ["boots", "potion"], desc: "Шаги по 5-6 клеток. Бонус при сужении карты." },
-    rios: { name: "🔪 Риос", soul: 45, fials: 10, inv: ["boots", "potion"], desc: "Шаги по 1-3 клетки. Шанс восстановить +1 Души при ходе." },
-    diessa: { name: "🎵 Диесса", soul: 35, fials: 35, inv: ["boots", "potion", "ballad"], desc: "Телепортируется при попадании в капкан." }
+    lira: { icon: "🩸", name: "🩸 Лира", soul: 20, fials: 5, inv: ["boots", "potion", "blood_harp"], desc: "Ловушки лечат (+10 Души). Старт: 20 HP." },
+    melissa: { icon: "🛡️", name: "🛡️ Мелисса", soul: 55, fials: 10, inv: ["boots", "potion"], desc: "Непробиваемая стена. Повышенный запас Души (55 HP)." },
+    crayd: { icon: "⚔️", name: "⚔️ Крэйд", soul: 40, fials: 20, inv: ["boots", "potion"], desc: "Шаги по 5-6 клеток. Бонус при сужении карты." },
+    rios: { icon: "🔪", name: "🔪 Риос", soul: 45, fials: 10, inv: ["boots", "potion"], desc: "Шаги по 1-3 клетки. Шанс восстановить +1 Души." },
+    diessa: { icon: "🎵", name: "🎵 Диесса", soul: 35, fials: 35, inv: ["boots", "potion", "ballad"], desc: "Телепортируется при попадании в капкан." }
+};
+
+const REGIONS = {
+    shteld: { name: "🏜️ Штельд", desc: "Пустынные руины. Баланс фиалов, капканов и чудовищ.", pool: ["empty_waste", "empty_waste", "statue", "statue", "kara_riosa", "scorpenid", "taraxacum_event"] },
+    gems: { name: "💎 Царство Самоцветов", desc: "Богатые хрустальные жилы (+10 фиалов), но мало лечения.", pool: ["empty_waste", "empty_waste", "crystal_mine", "crystal_mine", "scorpenid", "taraxacum_event"] },
+    blood_college: { name: "🩸 Кровавая Коллегия", desc: "Алые сгустки: много исцеления и ловушек.", pool: ["empty_waste", "kara_riosa", "kara_riosa", "scorpenid", "scorpenid", "statue"] },
+    agna: { name: "🎭 Агна", desc: "Королевство ядов: повышенный шанс капканов и богатых тайников.", pool: ["empty_waste", "statue", "crystal_mine", "scorpenid", "scorpenid", "taraxacum_event"] }
 };
 
 const ITEMS = {
-    boots: { name: "🥾 Сапоги (+4 шага)" },
-    potion: { name: "🧪 Экстракт (+15 Души)" },
-    blood_harp: { name: "🩸 Арфа крови (Капканы)" },
-    ballad: { name: "🎵 Баллада (Лечение)" }
+    boots: { name: "🥾 Сапоги (+4 шага)", buy: 10, sell: 5 },
+    potion: { name: "🍷 Экстракт (+15 Души)", buy: 12, sell: 6 },
+    blood_harp: { name: "🩸 Арфа крови", buy: 18, sell: 9 },
+    ballad: { name: "🎵 Баллада", buy: 15, sell: 7 }
 };
 
 const EVENTS = {
     empty_waste: { text: "🏜️ Пустошь: ветер гонит песок. Спокойный шаг.", fials: 0, soul: 0, skip: false },
     statue: { text: "🗿 Статуя в песках: найден тайник! (+5 фиалов)", fials: 5, soul: 0, skip: false },
+    crystal_mine: { text: "💎 Жила кристаллов: россыпь осколков! (+10 фиалов)", fials: 10, soul: 0, skip: false },
     kara_riosa: { text: "🏛️ Кара Риоса: молитва у руин укрепляет Душу. (+5 Души)", fials: 0, soul: 5, skip: false },
     scorpenid: { text: "🦂 Ловушка Скорпенида! (-5 Души и пропуск хода)", fials: 0, soul: -5, skip: true },
     taraxacum_event: { text: "🌱 Заросли Тараксакума! Яростный выпад чудовища. (-15 Души)", fials: 0, soul: -15, skip: false }
 };
 
 let selectedHero = profile.lastHero || "melissa";
+let selectedRegion = profile.lastRegion || "shteld";
 let currentRoomId = null;
 let myRole = null;
 let gameState = null;
 let matchRecorded = false;
+let timerInterval = null;
+let roulettePlayed = false;
 
-const heroListEl = document.getElementById("hero-list");
-Object.entries(HEROES).forEach(([id, h]) => {
-    const div = document.createElement("div");
-    div.className = "hero-card" + (id === selectedHero ? " selected" : "");
-    
-    const title = document.createElement("h3");
-    title.innerText = h.name;
-    const desc = document.createElement("p");
-    desc.innerText = h.desc;
-    
-    div.appendChild(title);
-    div.appendChild(desc);
-    
-    div.onclick = () => {
-        document.querySelectorAll(".hero-card").forEach(el => el.classList.remove("selected"));
-        div.classList.add("selected");
-        selectedHero = id;
-        profile.lastHero = id;
-        saveProfile();
-    };
-    heroListEl.appendChild(div);
-});
+function renderLobbySelectors() {
+    const heroListEl = document.getElementById("hero-list");
+    Object.entries(HEROES).forEach(([id, h]) => {
+        const div = document.createElement("div");
+        div.className = "select-card" + (id === selectedHero ? " selected" : "");
+        const title = document.createElement("h3");
+        title.innerText = h.name;
+        const desc = document.createElement("p");
+        desc.innerText = h.desc;
+        div.appendChild(title);
+        div.appendChild(desc);
+        div.onclick = () => {
+            heroListEl.querySelectorAll(".select-card").forEach(el => el.classList.remove("selected"));
+            div.classList.add("selected");
+            selectedHero = id;
+            profile.lastHero = id;
+            saveProfile();
+        };
+        heroListEl.appendChild(div);
+    });
 
-// Копирование кода комнаты
+    const regListEl = document.getElementById("region-list");
+    Object.entries(REGIONS).forEach(([id, r]) => {
+        const div = document.createElement("div");
+        div.className = "select-card" + (id === selectedRegion ? " selected" : "");
+        const title = document.createElement("h3");
+        title.innerText = r.name;
+        const desc = document.createElement("p");
+        desc.innerText = r.desc;
+        div.appendChild(title);
+        div.appendChild(desc);
+        div.onclick = () => {
+            regListEl.querySelectorAll(".select-card").forEach(el => el.classList.remove("selected"));
+            div.classList.add("selected");
+            selectedRegion = id;
+            profile.lastRegion = id;
+            saveProfile();
+        };
+        regListEl.appendChild(div);
+    });
+}
+renderLobbySelectors();
+
 document.getElementById("btn-copy-code").onclick = () => {
     if (!currentRoomId) return;
     navigator.clipboard.writeText(currentRoomId).then(() => {
@@ -127,11 +156,13 @@ document.getElementById("btn-create").onclick = async () => {
         const initialData = {
             size: 60,
             turn: "p1",
+            turnStart: Date.now(),
             status: "waiting",
+            activeRegion: selectedRegion,
             winner: null,
             boardMemory: {},
-            logs: ["🌀 " + profile.name + " (" + h.name + ") открыл разлом в измерении Зикс. Ожидаем соперника..."],
-            p1: { userName: profile.name, hero: selectedHero, name: h.name, pos: 1, soul: h.soul, fials: h.fials, inv: [...h.inv], skip: false },
+            logs: ["🌀 " + profile.name + " (" + h.name + ") открыл разлом. Предпочтение: " + REGIONS[selectedRegion].name + "."],
+            p1: { userName: profile.name, hero: selectedHero, icon: h.icon, name: h.name, regionChoice: selectedRegion, pos: 1, soul: h.soul, fials: h.fials, inv: [...h.inv], skip: false },
             p2: null
         };
 
@@ -151,17 +182,23 @@ document.getElementById("btn-join").onclick = async () => {
     const roomRef = ref(db, "rooms/" + roomCode);
     const snapshot = await get(roomRef);
 
-    if (!snapshot.exists()) return alert("Комната не найдена! Проверьте код.");
+    if (!snapshot.exists()) return alert("Комната не найдена!");
     const data = snapshot.val();
-    if (data.p2) return alert("В этой комнате уже два игрока!");
+    if (data.p2) return alert("Комната уже заполнена!");
 
     const h = HEROES[selectedHero];
-    const updatedLogs = [...(data.logs || []), "😈 " + profile.name + " (" + h.name + ") вошел в измерение! Дуэль началась."];
+    const chosenReg = Math.random() < 0.5 ? data.p1.regionChoice : selectedRegion;
+    const updatedLogs = [
+        ...(data.logs || []),
+        "😈 " + profile.name + " (" + h.name + ") вошел в разлом! Рулетка 50/50 выбрала: " + REGIONS[chosenReg].name + "!"
+    ];
 
     await update(roomRef, {
         status: "playing",
+        activeRegion: chosenReg,
+        turnStart: Date.now(),
         logs: updatedLogs,
-        p2: { userName: profile.name, hero: selectedHero, name: h.name, pos: 60, soul: h.soul, fials: h.fials, inv: [...h.inv], skip: false }
+        p2: { userName: profile.name, hero: selectedHero, icon: h.icon, name: h.name, regionChoice: selectedRegion, pos: 60, soul: h.soul, fials: h.fials, inv: [...h.inv], skip: false }
     });
 
     enterRoom(roomCode, "p2");
@@ -171,6 +208,7 @@ function enterRoom(roomCode, role) {
     currentRoomId = roomCode;
     myRole = role;
     matchRecorded = false;
+    roulettePlayed = false;
     document.getElementById("lobby-screen").classList.remove("active");
     document.getElementById("game-screen").classList.add("active");
     document.getElementById("display-room-id").innerText = roomCode;
@@ -179,23 +217,66 @@ function enterRoom(roomCode, role) {
         gameState = snapshot.val();
         if (gameState) renderGame();
     });
+
+    startTurnTimer();
 }
 
-// Кнопка реванша
+function startTurnTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(async () => {
+        if (!gameState || gameState.status !== "playing") {
+            document.getElementById("turn-timer").innerText = "⏱️ --";
+            return;
+        }
+        const elapsed = Math.floor((Date.now() - (gameState.turnStart || Date.now())) / 1000);
+        const left = Math.max(0, 30 - elapsed);
+        document.getElementById("turn-timer").innerText = "⏱️ " + left + "с";
+
+        if (left === 0 && gameState.turn === myRole) {
+            const s = JSON.parse(JSON.stringify(gameState));
+            const enemyRole = myRole === "p1" ? "p2" : "p1";
+            s.logs.push("⌛ Время вышло! " + s[myRole].name + " не успел походить, ход переходит сопернику.");
+            s.turn = enemyRole;
+            s.turnStart = Date.now();
+            await set(ref(db, "rooms/" + currentRoomId), s);
+        }
+    }, 1000);
+}
+
+function playRouletteAnimation(finalRegionId) {
+    const box = document.getElementById("roulette-box");
+    box.style.display = "block";
+    const keys = Object.keys(REGIONS);
+    let ticks = 0;
+    const anim = setInterval(() => {
+        const randKey = keys[ticks % keys.length];
+        box.innerText = "🎰 Рулетка территорий (50/50): " + REGIONS[randKey].name + "...";
+        ticks++;
+        if (ticks > 12) {
+            clearInterval(anim);
+            box.innerText = "✨ Выпала территория: " + REGIONS[finalRegionId].name + "!";
+            setTimeout(() => { box.style.display = "none"; }, 3500);
+        }
+    }, 120);
+}
+
 document.getElementById("btn-rematch").onclick = async () => {
     if (!gameState || !gameState.p1 || !gameState.p2) return;
     const h1 = HEROES[gameState.p1.hero];
     const h2 = HEROES[gameState.p2.hero];
+    const chosenReg = Math.random() < 0.5 ? gameState.p1.regionChoice : gameState.p2.regionChoice;
 
     const rematchData = {
         size: 60,
         turn: gameState.turn === "p1" ? "p2" : "p1",
+        turnStart: Date.now(),
         status: "playing",
+        activeRegion: chosenReg,
         winner: null,
         boardMemory: {},
-        logs: ["🔄 РЕВАНШ! Измерение Зикс восстановлено до 60 клеток. Новая дуэль началась!"],
-        p1: { userName: gameState.p1.userName, hero: gameState.p1.hero, name: h1.name, pos: 1, soul: h1.soul, fials: h1.fials, inv: [...h1.inv], skip: false },
-        p2: { userName: gameState.p2.userName, hero: gameState.p2.hero, name: h2.name, pos: 60, soul: h2.soul, fials: h2.fials, inv: [...h2.inv], skip: false }
+        logs: ["🔄 РЕВАНШ! Рулетка 50/50 выбрала: " + REGIONS[chosenReg].name + "!"],
+        p1: { userName: gameState.p1.userName, hero: gameState.p1.hero, icon: h1.icon, name: h1.name, regionChoice: gameState.p1.regionChoice, pos: 1, soul: h1.soul, fials: h1.fials, inv: [...h1.inv], skip: false },
+        p2: { userName: gameState.p2.userName, hero: gameState.p2.hero, icon: h2.icon, name: h2.name, regionChoice: gameState.p2.regionChoice, pos: 60, soul: h2.soul, fials: h2.fials, inv: [...h2.inv], skip: false }
     };
 
     await set(ref(db, "rooms/" + currentRoomId), rematchData);
@@ -203,7 +284,8 @@ document.getElementById("btn-rematch").onclick = async () => {
 
 function renderGame() {
     const s = gameState;
-    document.getElementById("board-size-text").innerText = s.size;
+    const activeReg = s.activeRegion || "shteld";
+    document.getElementById("active-region-label").innerText = "Королевство: " + REGIONS[activeReg].name;
 
     const turnEl = document.getElementById("turn-status");
     const rollBtn = document.getElementById("btn-roll");
@@ -212,6 +294,10 @@ function renderGame() {
     if (s.status === "playing") {
         matchRecorded = false;
         rematchBtn.style.display = "none";
+        if (!roulettePlayed) {
+            roulettePlayed = true;
+            playRouletteAnimation(activeReg);
+        }
     }
 
     if (s.status === "waiting") {
@@ -223,13 +309,18 @@ function renderGame() {
         turnEl.className = "turn-indicator";
         rollBtn.disabled = true;
         rematchBtn.style.display = "block";
+        roulettePlayed = false;
 
-        // Записываем статистику в профиль один раз за матч
         if (!matchRecorded && s[myRole]) {
             matchRecorded = true;
             profile.games += 1;
-            profile.totalFials += s[myRole].fials;
-            if (s.winner === myRole) profile.wins += 1;
+            const earned = s[myRole].fials;
+            if (s.winner === myRole) {
+                profile.wins += 1;
+                profile.totalFials += earned;
+            } else {
+                profile.totalFials += Math.floor(earned * 0.3);
+            }
             saveProfile();
             updateProfileUI();
         }
@@ -244,13 +335,13 @@ function renderGame() {
     }
 
     document.getElementById("p1-box").className = "player-box" + (myRole === "p1" ? " me" : "");
-    document.getElementById("p1-name").innerText = "👤 " + s.p1.name + " [" + (s.p1.userName || "Игрок 1") + "]" + (myRole === "p1" ? " (Вы)" : "");
-    document.getElementById("p1-stats").innerText = "❤️ Душа: " + s.p1.soul + " | 🪙 Фиалы: " + s.p1.fials + " | 📍 Кл: " + s.p1.pos;
+    document.getElementById("p1-name").innerText = s.p1.name + " [" + (s.p1.userName || "Игрок 1") + "]" + (myRole === "p1" ? " (Вы)" : "");
+    document.getElementById("p1-stats").innerText = "❤️ Душа: " + s.p1.soul + " | 🏺 Фиалы: " + s.p1.fials;
 
     if (s.p2) {
         document.getElementById("p2-box").className = "player-box" + (myRole === "p2" ? " me" : "");
-        document.getElementById("p2-name").innerText = "😈 " + s.p2.name + " [" + (s.p2.userName || "Игрок 2") + "]" + (myRole === "p2" ? " (Вы)" : "");
-        document.getElementById("p2-stats").innerText = "❤️ Душа: " + s.p2.soul + " | 🪙 Фиалы: " + s.p2.fials + " | 📍 Кл: " + s.p2.pos;
+        document.getElementById("p2-name").innerText = s.p2.name + " [" + (s.p2.userName || "Игрок 2") + "]" + (myRole === "p2" ? " (Вы)" : "");
+        document.getElementById("p2-stats").innerText = "❤️ Душа: " + s.p2.soul + " | 🏺 Фиалы: " + s.p2.fials;
     }
 
     const boardEl = document.getElementById("game-board");
@@ -263,11 +354,11 @@ function renderGame() {
         if (mem[i]) cell.classList.add(mem[i]);
 
         let icons = "";
-        if (s.p1 && s.p1.pos === i) icons += "👤";
-        if (s.p2 && s.p2.pos === i) icons += "😈";
+        if (s.p1 && s.p1.pos === i) icons += (s.p1.icon || "👤");
+        if (s.p2 && s.p2.pos === i) icons += (s.p2.icon || "😈");
         if (!icons && mem[i]) {
             if (mem[i] === "empty_waste") icons = "⚪";
-            else if (mem[i] === "statue") icons = "🟡";
+            else if (mem[i] === "statue" || mem[i] === "crystal_mine") icons = "🟡";
             else if (mem[i] === "scorpenid") icons = "🟣";
             else icons = "🟢";
         }
@@ -275,7 +366,6 @@ function renderGame() {
         const numSpan = document.createElement("span");
         numSpan.className = "cell-num";
         numSpan.innerText = i;
-        
         const iconSpan = document.createElement("span");
         iconSpan.innerText = icons;
 
@@ -284,19 +374,45 @@ function renderGame() {
         boardEl.appendChild(cell);
     }
 
+    const me = s[myRole];
+    const isMyTurn = (s.status === "playing" && s.turn === myRole);
+
     const invEl = document.getElementById("inventory-list");
     invEl.innerHTML = "";
-    const me = s[myRole];
     if (me && me.inv) {
         me.inv.forEach((itemKey, idx) => {
-            const btn = document.createElement("button");
-            btn.className = "item-btn";
-            btn.innerText = ITEMS[itemKey].name;
-            btn.disabled = (s.status !== "playing" || s.turn !== myRole);
-            btn.onclick = () => useItem(idx, itemKey);
-            invEl.appendChild(btn);
+            const chip = document.createElement("div");
+            chip.className = "item-chip";
+
+            const useBtn = document.createElement("button");
+            useBtn.className = "item-use-btn";
+            useBtn.innerText = ITEMS[itemKey].name;
+            useBtn.disabled = !isMyTurn;
+            useBtn.onclick = () => useItem(idx, itemKey);
+
+            const sellBtn = document.createElement("button");
+            sellBtn.className = "item-sell-btn";
+            sellBtn.innerText = "+" + ITEMS[itemKey].sell + "🏺";
+            sellBtn.title = "Продать торговцу";
+            sellBtn.disabled = !isMyTurn;
+            sellBtn.onclick = () => sellItem(idx, itemKey);
+
+            chip.appendChild(useBtn);
+            chip.appendChild(sellBtn);
+            invEl.appendChild(chip);
         });
     }
+
+    const shopEl = document.getElementById("shop-list");
+    shopEl.innerHTML = "";
+    Object.entries(ITEMS).forEach(([key, item]) => {
+        const btn = document.createElement("button");
+        btn.className = "shop-buy-btn";
+        btn.innerText = item.name + " (" + item.buy + "🏺)";
+        btn.disabled = (!isMyTurn || !me || me.fials < item.buy);
+        btn.onclick = () => buyItem(key);
+        shopEl.appendChild(btn);
+    });
 
     const logEl = document.getElementById("event-log");
     logEl.innerHTML = "";
@@ -306,6 +422,32 @@ function renderGame() {
         entry.innerText = msg;
         logEl.appendChild(entry);
     });
+}
+
+async function buyItem(itemKey) {
+    if (!gameState || gameState.turn !== myRole || gameState.status !== "playing") return;
+    const s = JSON.parse(JSON.stringify(gameState));
+    const me = s[myRole];
+    const item = ITEMS[itemKey];
+    if (me.fials < item.buy) return;
+
+    me.fials -= item.buy;
+    if (!me.inv) me.inv = [];
+    me.inv.push(itemKey);
+    s.logs.push("⚖️ " + me.name + " покупает у торговца: " + item.name + " за " + item.buy + " фиалов.");
+    await set(ref(db, "rooms/" + currentRoomId), s);
+}
+
+async function sellItem(idx, itemKey) {
+    if (!gameState || gameState.turn !== myRole || gameState.status !== "playing") return;
+    const s = JSON.parse(JSON.stringify(gameState));
+    const me = s[myRole];
+    const item = ITEMS[itemKey];
+
+    me.inv.splice(idx, 1);
+    me.fials += item.sell;
+    s.logs.push("⚖️ " + me.name + " продает торговцу " + item.name + " и получает +" + item.sell + " фиалов.");
+    await set(ref(db, "rooms/" + currentRoomId), s);
 }
 
 document.getElementById("btn-roll").onclick = async () => {
@@ -321,6 +463,7 @@ document.getElementById("btn-roll").onclick = async () => {
         me.skip = false;
         s.logs.push("⏳ " + me.name + " пропускает ход, выбираясь из пут!");
         s.turn = enemyRole;
+        s.turnStart = Date.now();
         await set(ref(db, "rooms/" + currentRoomId), s);
         return;
     }
@@ -337,17 +480,17 @@ document.getElementById("btn-roll").onclick = async () => {
     }
 
     me.pos += steps * dir;
-    let logMsg = "🎲 " + me.name + " делает шаг на " + steps + " кл. (позиция " + me.pos + "). ";
+    let logMsg = "🎲 " + me.name + " делает шаг на " + steps + " кл. ";
 
     if (me.pos > s.size) {
         me.pos = 1;
         s.size = Math.max(15, s.size - 2);
-        logMsg += "🔥 Край измерения сгорел! Поле сжалось до " + s.size + " клеток. ";
+        logMsg += "🔥 Край измерения сгорел! Поле сжалось. ";
         if (me.hero === "crayd") { me.soul += 5; me.fials += 5; }
     } else if (me.pos < 1) {
         me.pos = s.size;
         s.size = Math.max(15, s.size - 2);
-        logMsg += "🔥 Край измерения сгорел! Поле сжалось до " + s.size + " клеток. ";
+        logMsg += "🔥 Край измерения сгорел! Поле сжалось. ";
         if (me.hero === "crayd") { me.soul += 5; me.fials += 5; }
     }
 
@@ -367,7 +510,7 @@ document.getElementById("btn-roll").onclick = async () => {
             winnerText = me.fials >= enemy.fials ? "🏆 Ничья по Душе, но по фиалам побеждает " + me.name + "!" : "🏆 По фиалам побеждает " + enemy.name + "!";
         }
 
-        s.logs.push("⚔️ СТОЛКНОВЕНИЕ ЛОБ В ЛОБ НА КЛЕТКЕ " + me.pos + "! " + winnerText);
+        s.logs.push("⚔️ СТОЛКНОВЕНИЕ ЛОБ В ЛОБ! " + winnerText);
         await set(ref(db, "rooms/" + currentRoomId), s);
         return;
     }
@@ -375,8 +518,8 @@ document.getElementById("btn-roll").onclick = async () => {
     if (!s.boardMemory) s.boardMemory = {};
     let evKey = s.boardMemory[me.pos];
     if (!evKey) {
-        const pool = ["empty_waste", "empty_waste", "empty_waste", "statue", "statue", "kara_riosa", "scorpenid", "taraxacum_event"];
-        evKey = pool[Math.floor(Math.random() * pool.length)];
+        const regPool = REGIONS[s.activeRegion || "shteld"].pool;
+        evKey = regPool[Math.floor(Math.random() * regPool.length)];
         s.boardMemory[me.pos] = evKey;
     } else {
         logMsg += "[Повторная метка] ";
@@ -390,7 +533,7 @@ document.getElementById("btn-roll").onclick = async () => {
     if (ev.skip) {
         if (me.hero === "diessa") {
             me.pos = Math.floor(Math.random() * s.size) + 1;
-            logMsg += " 🎵 Диесса разрушает оковы и телепортируется на клетку " + me.pos + "!";
+            logMsg += " 🎵 Диесса разрушает оковы и телепортируется!";
         } else if (me.hero === "lira") {
             me.soul = Math.min(100, me.soul + 10);
             me.skip = true;
@@ -402,6 +545,7 @@ document.getElementById("btn-roll").onclick = async () => {
 
     s.logs.push(logMsg);
     s.turn = enemyRole;
+    s.turnStart = Date.now();
     await set(ref(db, "rooms/" + currentRoomId), s);
 };
 
@@ -418,7 +562,7 @@ async function useItem(idx, itemKey) {
 
     if (itemKey === "potion") {
         me.soul = Math.min(100, me.soul + 15);
-        msg = "🧪 " + me.name + " выпивает Экстракт Воли (+15 Души).";
+        msg = "🍷 " + me.name + " выпивает Экстракт Воли (+15 Души).";
     } else if (itemKey === "blood_harp") {
         [enemy.pos - 1, enemy.pos + 1].forEach(c => {
             if (c >= 1 && c <= s.size) s.boardMemory[c] = "scorpenid";
@@ -435,7 +579,7 @@ async function useItem(idx, itemKey) {
         me.pos += 4 * dir;
         if (me.pos > s.size) me.pos = 1;
         if (me.pos < 1) me.pos = s.size;
-        msg = "🥾 " + me.name + " использует Сапоги Скитальца и переносится на клетку " + me.pos + "!";
+        msg = "🥾 " + me.name + " использует Сапоги Скитальца и совершает рывок вперед!";
     }
 
     s.logs.push(msg);
