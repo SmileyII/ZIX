@@ -1,3 +1,8 @@
+import { HEROES } from "./heroes.js";
+import { REGIONS } from "./regions.js";
+import { EVENTS } from "./events.js";
+import { ITEMS, generateShopStock, applyItemEffect } from "./items.js";
+
 const cdnBase = "https://www." + "gstatic.com" + "/firebasejs/10.8.0/";
 const { initializeApp } = await import(cdnBase + "firebase-app.js");
 const { getDatabase, ref, set, get, update, onValue } = await import(cdnBase + "firebase-database.js");
@@ -53,48 +58,6 @@ function updateProfileUI() {
 }
 updateProfileUI();
 
-const HEROES = {
-    lira: { icon: "🩸", name: "🩸 Лира", soul: 20, fials: 5, inv: ["boots", "potion", "blood_harp"], desc: "Ловушки лечат (+10 Души). Старт: 20 HP." },
-    melissa: { icon: "🛡️", name: "🛡️ Мелисса", soul: 55, fials: 10, inv: ["boots", "potion"], desc: "Непробиваемая стена. Повышенный запас Души (55 HP)." },
-    crayd: { icon: "⚔️", name: "⚔️ Крэйд", soul: 40, fials: 20, inv: ["boots", "potion"], desc: "Шаги по 5-6 клеток. Бонус при сужении карты." },
-    rios: { icon: "🔪", name: "🔪 Риос", soul: 45, fials: 10, inv: ["boots", "potion"], desc: "Шаги по 1-3 клетки. Шанс восстановить +1 Души." },
-    diessa: { icon: "🎵", name: "🎵 Диесса", soul: 35, fials: 35, inv: ["boots", "potion", "ballad"], desc: "Телепортируется при попадании в капкан." }
-};
-
-const REGIONS = {
-    shteld: { name: "🏜️ Штельд", desc: "Пустынные руины. Баланс фиалов, капканов и чудовищ.", pool: ["empty_waste", "empty_waste", "statue", "statue", "kara_riosa", "scorpenid", "taraxacum_event"] },
-    gems: { name: "💎 Царство Самоцветов", desc: "Богатые хрустальные жилы (+10 фиалов), но мало лечения.", pool: ["empty_waste", "empty_waste", "crystal_mine", "crystal_mine", "scorpenid", "taraxacum_event"] },
-    blood_college: { name: "🩸 Кровавая Коллегия", desc: "Алые сгустки: много исцеления и ловушек.", pool: ["empty_waste", "kara_riosa", "kara_riosa", "scorpenid", "scorpenid", "statue"] },
-    agna: { name: "🎭 Агна", desc: "Королевство ядов: повышенный шанс капканов и богатых тайников.", pool: ["empty_waste", "statue", "crystal_mine", "scorpenid", "scorpenid", "taraxacum_event"] }
-};
-
-const ITEMS = {
-    boots: { name: "🥾 Сапоги (+4 шага)", buy: 10, sell: 5 },
-    potion: { name: "🍷 Экстракт (+15 Души)", buy: 12, sell: 6 },
-    blood_harp: { name: "🩸 Арфа крови", buy: 18, sell: 9 },
-    ballad: { name: "🎵 Баллада", buy: 15, sell: 7 },
-    aegis: { name: "🛡️ Щит Эгиды (Блок)", buy: 14, sell: 7 },
-    swap_orb: { name: "🔮 Сфера Сдвига", buy: 20, sell: 10 }
-};
-
-function generateShopStock() {
-    const allKeys = Object.keys(ITEMS);
-    const stock = [];
-    for (let i = 0; i < 5; i++) {
-        stock.push(allKeys[Math.floor(Math.random() * allKeys.length)]);
-    }
-    return stock;
-}
-
-const EVENTS = {
-    empty_waste: { text: "🏜️ Пустошь: ветер гонит песок. Спокойный шаг.", fials: 0, soul: 0, skip: false },
-    statue: { text: "🗿 Статуя в песках: найден тайник! (+5 фиалов)", fials: 5, soul: 0, skip: false },
-    crystal_mine: { text: "💎 Жила кристаллов: россыпь осколков! (+10 фиалов)", fials: 10, soul: 0, skip: false },
-    kara_riosa: { text: "🏛️ Кара Риоса: молитва у руин укрепляет Душу. (+5 Души)", fials: 0, soul: 5, skip: false },
-    scorpenid: { text: "🦂 Ловушка Скорпенида! (-5 Души и пропуск хода)", fials: 0, soul: -5, skip: true },
-    taraxacum_event: { text: "🌱 Заросли Тараксакума! Яростный выпад чудовища. (-15 Души)", fials: 0, soul: -15, skip: false }
-};
-
 let selectedHero = profile.lastHero || "melissa";
 let selectedRegion = profile.lastRegion || "shteld";
 let currentRoomId = null;
@@ -146,7 +109,6 @@ function renderLobbySelectors() {
     });
 }
 renderLobbySelectors();
-
 document.getElementById("btn-copy-code").onclick = () => {
     if (!currentRoomId) return;
     navigator.clipboard.writeText(currentRoomId).then(() => {
@@ -396,6 +358,7 @@ function renderGame() {
         me.inv.forEach((itemKey, idx) => {
             const chip = document.createElement("div");
             chip.className = "item-chip";
+
             const useBtn = document.createElement("button");
             useBtn.className = "item-use-btn";
             useBtn.innerText = ITEMS[itemKey].name;
@@ -592,43 +555,8 @@ async function useItem(idx, itemKey) {
     if (!gameState || gameState.turn !== myRole || gameState.status !== "playing") return;
     const s = JSON.parse(JSON.stringify(gameState));
     const me = s[myRole];
-    const enemyRole = myRole === "p1" ? "p2" : "p1";
-    const enemy = s[enemyRole];
-    if (!s.boardMemory) s.boardMemory = {};
-
     me.inv.splice(idx, 1);
-    let msg = "";
-
-    if (itemKey === "potion") {
-        me.soul = Math.min(100, me.soul + 15);
-        msg = "🍷 " + me.name + " выпивает Экстракт Воли (+15 Души).";
-    } else if (itemKey === "blood_harp") {
-        [enemy.pos - 1, enemy.pos + 1].forEach(c => {
-            if (c >= 1 && c <= s.size) s.boardMemory[c] = "scorpenid";
-        });
-        msg = "🩸 " + me.name + " играет на Арфе крови! Клетки вокруг соперника превращены в капканы.";
-    } else if (itemKey === "ballad") {
-        const dir = myRole === "p1" ? 1 : -1;
-        [me.pos + dir, me.pos + dir * 3].forEach(c => {
-            if (c >= 1 && c <= s.size) s.boardMemory[c] = "kara_riosa";
-        });
-        msg = "🎵 " + me.name + " поет Балладу Неверделла, создавая благословенные клетки впереди!";
-    } else if (itemKey === "boots") {
-        const dir = myRole === "p1" ? 1 : -1;
-        me.pos += 4 * dir;
-        if (me.pos > s.size) me.pos = 1;
-        if (me.pos < 1) me.pos = s.size;
-        msg = "🥾 " + me.name + " использует Сапоги Скитальца и совершает рывок вперед!";
-    } else if (itemKey === "aegis") {
-        me.inv.push("aegis");
-        msg = "🛡️ Щит Эгиды работает пассивно — он сам сработает при попадании в капкан!";
-    } else if (itemKey === "swap_orb") {
-        const tempPos = me.pos;
-        me.pos = enemy.pos;
-        enemy.pos = tempPos;
-        msg = "🔮 " + me.name + " активирует Сферу Сдвига и меняется местами с соперником!";
-    }
-
+    const msg = applyItemEffect(itemKey, s, myRole);
     s.logs.push(msg);
     await set(ref(db, "rooms/" + currentRoomId), s);
 }
